@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>PEP 686 – Make UTF-8 mode default | peps.python.org</title>
+    <link rel="shortcut icon" href="../_static/py.png"/>
+    <link rel="canonical" href="https://peps.python.org/pep-0686.html" />
+    <link rel="stylesheet" href="../_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/mq.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/dark.css" type="text/css" media="(prefers-color-scheme: dark)" id="css-dark"/>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" media="(prefers-color-scheme: light)" id="pyg" />
+    <link rel="stylesheet" href="../_static/pygments_dark.css" type="text/css" media="(prefers-color-scheme: dark)" id="pyg-dark" />
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <meta name="description" content="Python Enhancement Proposals (PEPs)"/>
+</head>
+<body>
+    <section id="pep-page-section">
+        <header>
+            <h1>Python Enhancement Proposals</h1>
+            <ul class="breadcrumbs">
+                <li><a href="https://www.python.org/" title="The Python Programming Language">Python</a> &raquo; </li>
+                <li><a href="../pep-0000/">PEP Index</a> &raquo; </li>
+                <li>PEP 686 – Make UTF-8 mode default</li>
+            </ul>
+            <button aria-label="Toggle dark mode" onClick="toggleColourScheme()"></button>
+        </header>
+        <article>
+            <section id="pep-content">
+<h1 class="page-title">PEP 686 – Make UTF-8 mode default</h1>
+<dl class="rfc2822 field-list simple">
+<dt class="field-odd">PEP</dt>
+<dd class="field-odd">686</dd>
+<dt class="field-even">Title</dt>
+<dd class="field-even">Make UTF-8 mode default</dd>
+<dt class="field-odd">Author</dt>
+<dd class="field-odd">Inada Naoki &lt;songofacandy&#32;&#97;t&#32;gmail.com&gt;</dd>
+<dt class="field-even">Discussions-To</dt>
+<dd class="field-even"><a class="reference external" href="https://discuss.python.org/t/14435">https://discuss.python.org/t/14435</a></dd>
+<dt class="field-odd">Status</dt>
+<dd class="field-odd">Draft</dd>
+<dt class="field-even">Type</dt>
+<dd class="field-even">Standards Track</dd>
+<dt class="field-odd">Created</dt>
+<dd class="field-odd">18-Mar-2022</dd>
+<dt class="field-even">Python-Version</dt>
+<dd class="field-even">3.12</dd>
+<dt class="field-odd">Post-History</dt>
+<dd class="field-odd"><a class="reference external" href="https://discuss.python.org/t/14435">18-Mar-2022</a></dd>
+</dl>
+<hr class="docutils" />
+<section id="contents">
+<details><summary>Contents</summary><ul class="simple">
+<li><a class="reference internal" href="#abstract">Abstract</a></li>
+<li><a class="reference internal" href="#motivation">Motivation</a></li>
+<li><a class="reference internal" href="#specification">Specification</a><ul>
+<li><a class="reference internal" href="#changes-to-utf-8-mode">Changes to UTF-8 mode</a></li>
+<li><a class="reference internal" href="#enable-utf-8-mode-by-default">Enable UTF-8 mode by default</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#backward-compatibility">Backward Compatibility</a></li>
+<li><a class="reference internal" href="#preceding-examples">Preceding examples</a></li>
+<li><a class="reference internal" href="#rejected-alternative">Rejected Alternative</a><ul>
+<li><a class="reference internal" href="#deprecate-implicit-encoding">Deprecate implicit encoding</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#how-to-teach-this">How to teach this</a></li>
+<li><a class="reference internal" href="#copyright">Copyright</a></li>
+</ul>
+</details></section>
+<section id="abstract">
+<h2><a class="toc-backref" href="#abstract">Abstract</a></h2>
+<p>This PEP proposes making <a class="pep reference internal" href="../pep-0540" title="PEP 540 – Add a new UTF-8 Mode">UTF-8 mode</a> on by default.</p>
+<p>With this change, Python uses UTF-8 for default encoding of files, stdio, and
+pipes consistently.</p>
+</section>
+<section id="motivation">
+<h2><a class="toc-backref" href="#motivation">Motivation</a></h2>
+<p>UTF-8 becomes de-facto standard text encoding.</p>
+<ul class="simple">
+<li>Default encoding of Python source files is UTF-8.</li>
+<li>JSON, TOML, YAML uses UTF-8.</li>
+<li>Most text editors including VS Code and Windows notepad use UTF-8 by
+default.</li>
+<li>Most websites and text data on the internet uses UTF-8.</li>
+<li>And many other popular programming languages including node.js, Go, Rust,
+Ruby, and Java uses UTF-8 by default.</li>
+</ul>
+<p>Changing the default encoding to UTF-8 makes Python easier to interoperate
+with them.</p>
+<p>Additionally, many Python developers using Unix forget that the default
+encoding is platform dependant. They omit to specify <code class="docutils literal notranslate"><span class="pre">encoding=&quot;utf-8&quot;</span></code> when
+they read text files encoded in UTF-8 (e.g. JSON, TOML, Markdown, and Python
+source files). Inconsistent default encoding caused many bugs.</p>
+</section>
+<section id="specification">
+<h2><a class="toc-backref" href="#specification">Specification</a></h2>
+<section id="changes-to-utf-8-mode">
+<h3><a class="toc-backref" href="#changes-to-utf-8-mode">Changes to UTF-8 mode</a></h3>
+<p>Currently, UTF-8 mode affects to <code class="docutils literal notranslate"><span class="pre">locale.getpreferredencoding()</span></code>.</p>
+<p>This PEP proposes to remove this override. UTF-8 mode will not affect to
+<code class="docutils literal notranslate"><span class="pre">locale</span></code> module.</p>
+<p>After this change, UTF-8 mode affects to:</p>
+<ul class="simple">
+<li>stdin, stdout, stderr<ul>
+<li>User can override it with <code class="docutils literal notranslate"><span class="pre">PYTHONIOENCODING</span></code>.</li>
+</ul>
+</li>
+<li>filesystem encoding</li>
+<li><code class="docutils literal notranslate"><span class="pre">TextIOWrapper</span></code> and APIs using it including <code class="docutils literal notranslate"><span class="pre">open()</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Path.read_text()</span></code>, <code class="docutils literal notranslate"><span class="pre">subprocess.Popen(cmd,</span> <span class="pre">text=True)</span></code>, etc…</li>
+</ul>
+<p>This change will be introduced in Python 3.11 if possible.</p>
+</section>
+<section id="enable-utf-8-mode-by-default">
+<h3><a class="toc-backref" href="#enable-utf-8-mode-by-default">Enable UTF-8 mode by default</a></h3>
+<p>Python enables UTF-8 mode by default.</p>
+<p>User can still disable UTF-8 mode by setting <code class="docutils literal notranslate"><span class="pre">PYTHONUTF8=0</span></code> or <code class="docutils literal notranslate"><span class="pre">-X</span> <span class="pre">utf8=0</span></code>.</p>
+</section>
+</section>
+<section id="backward-compatibility">
+<h2><a class="toc-backref" href="#backward-compatibility">Backward Compatibility</a></h2>
+<p>Most Unix systems use UTF-8 locale and Python enables UTF-8 mode when its
+locale is C or POSIX. So this change mostly affects Windows users.</p>
+<p>When a Python program depends on the default encoding, this change may cause
+<code class="docutils literal notranslate"><span class="pre">UnicodeError</span></code>, mojibake, or even silent data corruption. So this change
+should be announced very loudly.</p>
+<p>To resolve this backward incompatibility, users can do:</p>
+<ul class="simple">
+<li>Disable UTF-8 mode</li>
+<li>Use <code class="docutils literal notranslate"><span class="pre">EncodingWarning</span></code> to find where the default encoding is used and use
+<code class="docutils literal notranslate"><span class="pre">encoding=&quot;locale&quot;</span></code> option to keep using locale encoding
+(as defined in <a class="pep reference internal" href="../pep-0597" title="PEP 597 – Add optional EncodingWarning">PEP 597</a>).</li>
+</ul>
+</section>
+<section id="preceding-examples">
+<h2><a class="toc-backref" href="#preceding-examples">Preceding examples</a></h2>
+<ul class="simple">
+<li>Ruby <a class="reference external" href="https://bugs.ruby-lang.org/issues/16604">changed</a> the default <code class="docutils literal notranslate"><span class="pre">external_encoding</span></code>
+to UTF-8 on Windows in Ruby 3.0 (2020).</li>
+<li>Java <a class="reference external" href="https://openjdk.java.net/jeps/400">changed</a> the default text encoding
+to UTF-8 in JDK 18. (2022).</li>
+</ul>
+<p>Both Ruby and Java have an option for backward compatibility.
+They don’t provide any warning like <a class="pep reference internal" href="../pep-0597" title="PEP 597 – Add optional EncodingWarning">PEP 597</a>’s <code class="docutils literal notranslate"><span class="pre">EncodingWarning</span></code>
+in Python for use of the default encoding.</p>
+</section>
+<section id="rejected-alternative">
+<h2><a class="toc-backref" href="#rejected-alternative">Rejected Alternative</a></h2>
+<section id="deprecate-implicit-encoding">
+<h3><a class="toc-backref" href="#deprecate-implicit-encoding">Deprecate implicit encoding</a></h3>
+<p>Deprecating use of the default encoding is considered.</p>
+<p>But there are many cases user uses the default encoding when just they need
+ASCII. And some users use Python only on Unix with UTF-8 locale.</p>
+<p>So forcing users to specify the <code class="docutils literal notranslate"><span class="pre">encoding</span></code> option everywhere is too painful.</p>
+<p>Java also rejected this idea in <a class="reference external" href="https://openjdk.java.net/jeps/400">JEP 400</a>.</p>
+</section>
+</section>
+<section id="how-to-teach-this">
+<h2><a class="toc-backref" href="#how-to-teach-this">How to teach this</a></h2>
+<p>For new users, this change reduces things that need to teach.</p>
+<p>Users can delay learning about text encoding until they need to handle
+non-UTF-8 text files.</p>
+<p>For existing users, see <a class="reference internal" href="#backward-compatibility">Backward compatibility</a> section.</p>
+</section>
+<section id="copyright">
+<h2><a class="toc-backref" href="#copyright">Copyright</a></h2>
+<p>This document is placed in the public domain or under the
+CC0-1.0-Universal license, whichever is more permissive.</p>
+</section>
+</section>
+<hr class="docutils" />
+<p>Source: <a class="reference external" href="https://github.com/python/peps/blob/main/pep-0686.rst">https://github.com/python/peps/blob/main/pep-0686.rst</a></p>
+<p>Last modified: <a class="reference external" href="https://github.com/python/peps/commits/main/pep-0686.rst">2022-03-19 01:25:23 GMT</a></p>
+
+        </article>
+        <nav id="pep-sidebar">
+            <h2>Contents</h2>
+            <p id="toc-title">PEP 686 – Make UTF-8 mode default</p>
+            <ul>
+<li><a class="reference internal" href="#abstract">Abstract</a></li>
+<li><a class="reference internal" href="#motivation">Motivation</a></li>
+<li><a class="reference internal" href="#specification">Specification</a><ul>
+<li><a class="reference internal" href="#changes-to-utf-8-mode">Changes to UTF-8 mode</a></li>
+<li><a class="reference internal" href="#enable-utf-8-mode-by-default">Enable UTF-8 mode by default</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#backward-compatibility">Backward Compatibility</a></li>
+<li><a class="reference internal" href="#preceding-examples">Preceding examples</a></li>
+<li><a class="reference internal" href="#rejected-alternative">Rejected Alternative</a><ul>
+<li><a class="reference internal" href="#deprecate-implicit-encoding">Deprecate implicit encoding</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#how-to-teach-this">How to teach this</a></li>
+<li><a class="reference internal" href="#copyright">Copyright</a></li>
+</ul>
+
+            <br />
+            <a id="source" href="https://github.com/python/peps/blob/main/pep-0686.rst">Page Source (GitHub)</a>
+        </nav>
+    </section>
+    <script src="../_static/colour_scheme.js"></script>
+</body>
+</html>
